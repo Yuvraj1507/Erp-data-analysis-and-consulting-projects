@@ -1,0 +1,170 @@
+networks:
+  eznetwork:
+    driver: bridge
+
+services:
+  configserver:
+    image: "ezbank/configserver:latest"
+    container_name: configserver-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: "curl --fail --silent configserver:8085/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  eurekaserver:
+    image: "ezbank/eurekaserver:latest"
+    container_name: eurekaserver-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8081:8081"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8081/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_APPLICATION_NAME: "eurekaserver"
+
+  accounts:
+    image: "ezbank/accounts:latest"
+    container_name: accounts-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: "curl --fail --silent accounts:8090/actuator/health/readiness | grep UP || exit 1"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 50s
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: "rabbitmq"
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
+  cards:
+    image: "ezbank/cards:latest"
+    container_name: cards-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8091:8091"
+    healthcheck:
+      test: "curl --fail --silent cards:8091/actuator/health/readiness | grep UP || exit 1"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 50s
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
+  loans:
+    image: "ezbank/loans:latest"
+    container_name: loans-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8092:8092"
+    healthcheck:
+      test: "curl --fail --silent loans:8092/actuator/health/readiness | grep UP || exit 1"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 50s
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
+
+  notificationserver:
+    image: "ezbank/notificationserver:latest"
+    container_name: notificationserver-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8093:8093"
+    healthcheck:
+      test: "curl --fail --silent notificationserver:8093/actuator/health/readiness | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 50s
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: "rabbit"
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
+  apigateway:
+    image: "ezbank/apigateway:latest"
+    container_name: apigateway-ms
+    networks:
+      - eznetwork
+    ports:
+      - "8080:8080"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      accounts:
+        condition: service_healthy
+      loans:
+        condition: service_healthy
+      cards:
+        condition: service_healthy
+      notificationserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent apigateway:8080/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8085/
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
+

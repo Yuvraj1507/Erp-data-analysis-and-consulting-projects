@@ -1,0 +1,42 @@
+services:
+  network-config:
+    networks:
+      - eznetwork
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  base-config:
+    extends:
+      service: network-config
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  eureka-config:
+    extends:
+      service: base-config
+    depends_on:
+      configserver:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CLOUD_CONFIG_URI: http://configserver:8085
+      SPRING_CONFIG_IMPORT: 'optional:configserver:http://configserver:8085'
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+
+  services-config:
+    extends:
+      service: base-config
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_CLOUD_CONFIG_URI: http://configserver:8085
+      SPRING_CONFIG_IMPORT: 'optional:configserver:http://configserver:8085'
+      SPRING_BOOT_APPLICATION_LOG_LEVEL: DEBUG
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8081/eureka/
+
