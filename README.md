@@ -1,4 +1,4 @@
-## 📘 ERP, Data Analysis & Consulting Projects Repository
+## 📘 Java-SQL-ERP-projects-portfolio
 
 This repository contains three end-to-end academic and portfolio projects demonstrating key skills in ERP workflow configuration, SQL-based data validation, ETL processes, business process analysis, and functional consulting practices.
 These projects were completed between 2023–2025 as part of academic coursework and self-led learning, guided by faculty mentors and industry-relevant methodologies.
